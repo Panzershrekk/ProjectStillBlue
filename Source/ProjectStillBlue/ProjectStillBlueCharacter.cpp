@@ -20,7 +20,7 @@ AProjectStillBlueCharacter::AProjectStillBlueCharacter()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-		
+		// salutles eamis c est david largafarge pokemon
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
