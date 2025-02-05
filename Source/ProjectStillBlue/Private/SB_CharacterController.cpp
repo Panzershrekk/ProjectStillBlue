@@ -25,6 +25,18 @@ ASB_CharacterController::ASB_CharacterController()
     bUseControllerRotationYaw = false;
     bUseControllerRotationRoll = false;
 
+    GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...
+    GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
+
+    // Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
+    // instead of recompiling to adjust them
+    GetCharacterMovement()->JumpZVelocity = 700.f;
+    GetCharacterMovement()->AirControl = 0.35f;
+    GetCharacterMovement()->MaxWalkSpeed = 500.f;
+    GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
+    GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+    GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
+
     // Create a camera boom (pulls in towards the player if there is a collision)
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(RootComponent);
@@ -49,14 +61,24 @@ void ASB_CharacterController::BeginPlay()
 void ASB_CharacterController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+    ControlInputVector = Velocity;    
 }
 
 // Called to bind functionality to input
 void ASB_CharacterController::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+    if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 
+        // Looking
+        EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::Look);
+        // MOVING                
+        EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::Move);
+
+        // Waves
+        EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::RightWaveTrigger);
+        EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::LeftWaveTrigger);
+    }
 }
 
 void ASB_CharacterController::NotifyControllerChanged()
@@ -72,4 +94,54 @@ void ASB_CharacterController::NotifyControllerChanged()
         }
     }
 }
+
+void ASB_CharacterController::RightWaveTrigger(const FInputActionValue& Value) {
+
+}
+
+
+void ASB_CharacterController::LeftWaveTrigger(const FInputActionValue& Value) {
+
+}
+
+void ASB_CharacterController::Look(const FInputActionValue& Value)
+{
+    // input is a Vector2D
+    FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+    if (Controller != nullptr)
+    {
+        // add yaw and pitch input to controller
+        AddControllerYawInput(LookAxisVector.X);
+        AddControllerPitchInput(LookAxisVector.Y);
+    }
+}
+
+void ASB_CharacterController::AddAccelerationInput(FVector WorldDirection, float ScaleValue) {
+    Velocity += WorldDirection * ScaleValue * SurfAcceleration;
+}
+
+void ASB_CharacterController::Move(const FInputActionValue& Value)
+{
+    // input is a Vector2D
+    FVector2D MovementVector = Value.Get<FVector2D>();
+
+    if (Controller != nullptr)
+    {
+        // find out which way is forward
+        const FRotator Rotation = Controller->GetControlRotation();
+        const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+        // get forward vector
+        const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+
+        // get right vector 
+        const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+        AddAccelerationInput(ForwardDirection, MovementVector.Y);
+        AddAccelerationInput(RightDirection, MovementVector.X);
+    }
+}
+
+
 

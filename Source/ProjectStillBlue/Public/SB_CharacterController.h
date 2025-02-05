@@ -18,13 +18,33 @@ UCLASS()
 class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 {
 	GENERATED_BODY()
+
+	// properties
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LookAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MoveAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RightWaveTriggerAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LeftWaveTriggerAction;
+	// variables
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
+	float MaxSurfSpeed = 5;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
+	float SurfAcceleration = 1;
+
+	FVector Velocity;
+
 	virtual void NotifyControllerChanged() override;
+	void AddAccelerationInput(FVector WorldDirection, float ScaleValue);
 
 public:
 	// Sets default values for this character's properties
@@ -33,6 +53,14 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	void Look(const FInputActionValue& Value);
+
+	void Move(const FInputActionValue& Value);
+
+	void RightWaveTrigger(const FInputActionValue& Value);
+
+	void LeftWaveTrigger(const FInputActionValue& Value);
 
 public:	
 	// Called every frame
