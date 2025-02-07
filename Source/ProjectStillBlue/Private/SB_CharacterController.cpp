@@ -180,7 +180,7 @@ void ASB_CharacterController::Move(const FInputActionValue& Value)
 			// Réduction progressive de la vitesse pour simuler l’inertie
 			float Speed = CurrentVelocity.Size();
 			Speed = FMath::Max(Speed - SurfFriction * GetWorld()->GetDeltaSeconds(), 0.0f);
-			CurrentVelocity = Speed;
+			CurrentVelocity = CurrentVelocity.GetSafeNormal() * Speed;
 		}
 
 		// Applique le mouvement
