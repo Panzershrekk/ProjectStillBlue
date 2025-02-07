@@ -15,6 +15,13 @@ class UInputMappingContext;
 class UCameraComponent;
 class USpringArmComponent;
 
+UENUM(BlueprintType)
+enum class ECustomMovementMode : uint8
+{
+	Walking,
+	Surfing
+};
+
 UCLASS()
 class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 {
@@ -37,23 +44,26 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LeftWaveTriggerAction;
 	// variables
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
-	float MaxSurfSpeed = 5;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
-	float SurfAcceleration = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
+	float SurfAcceleration = 500.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
-	float SurfRotationSpeed = 100.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
-	float MaxTurnAngle = 90.f;
-	FVector Velocity;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
+	float SurfMaxSpeed = 1200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
+	float SurfFriction = 200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
+	float SurfTurnSpeed = 1.5f;
+
+	FVector CurrentVelocity = FVector::ZeroVector;
 
 	virtual void NotifyControllerChanged() override;
 	void AddAccelerationInput(FVector WorldDirection, float ScaleValue);
 
 public:
 	// Sets default values for this character's properties
-	ASB_CharacterController();
+	ASB_CharacterController();	
 
 protected:
 	// Called when the game starts or when spawned
@@ -65,18 +75,21 @@ protected:
 
 	USB_CharacterMovementComponent* GetUSBCharacterMovementComponent();
 
-	void ProcessRotation(FRotator Rotation);
-
 	void RightWaveTrigger(const FInputActionValue& Value);
 
 	void LeftWaveTrigger(const FInputActionValue& Value);
+
+	void SetCustomMovementMode(ECustomMovementMode NewMode);
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;	
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	//UFUNCTION(BlueprintCallable, Category = "Test")
+	virtual void Landed(const FHitResult& Hit) override; // Appelé quand on atterrit sur une surface	
+
+private:
+	ECustomMovementMode CurrentMovementMode = ECustomMovementMode::Surfing;
 };
