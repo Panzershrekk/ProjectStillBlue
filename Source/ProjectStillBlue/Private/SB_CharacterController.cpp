@@ -131,9 +131,10 @@ void ASB_CharacterController::Move(const FInputActionValue& Value)
         const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
         const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
+        const FVector MoveVector = ForwardDirection * RightDirection;
         /*AddAccelerationInput(ForwardDirection, MovementVector.Y);
         AddAccelerationInput(RightDirection, MovementVector.X);*/
-        AddMovementInput(ForwardDirection, MovementVector.Y);
+        AddMovementInput(MoveVector, MovementVector.Y);
         //AddMovementInput(RightDirection, MovementVector.X);
     }
 }
