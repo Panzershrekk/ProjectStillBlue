@@ -42,6 +42,10 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
 	float SurfAcceleration = 1;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
+	float SurfRotationSpeed = 100.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = SurfMovement, meta = (AllowPrivateAccess = "true"))
+	float MaxTurnAngle = 90.f;
 	FVector Velocity;
 
 	virtual void NotifyControllerChanged() override;

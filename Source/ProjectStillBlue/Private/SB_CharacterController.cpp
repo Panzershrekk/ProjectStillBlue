@@ -110,8 +110,8 @@ void ASB_CharacterController::Look(const FInputActionValue& Value)
 
     if (Controller != nullptr)
     {
-        AddControllerYawInput(LookAxisVector.X);
-        AddControllerPitchInput(LookAxisVector.Y);
+        /*AddControllerYawInput(LookAxisVector.X);
+        AddControllerPitchInput(LookAxisVector.Y);*/
     }
 }
 
@@ -124,15 +124,15 @@ void ASB_CharacterController::Move(const FInputActionValue& Value)
     // input is a Vector2D
     FVector2D MovementVector = Value.Get<FVector2D>();
 
-    if (Controller != nullptr)
+    /*if (Controller != nullptr)
     {
         const FRotator Rotation = Controller->GetControlRotation();
         const FRotator YawRotation(0, Rotation.Yaw, 0);
         const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
         const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-        /*AddAccelerationInput(ForwardDirection, MovementVector.Y);
-        AddAccelerationInput(RightDirection, MovementVector.X);*/
+        //AddAccelerationInput(ForwardDirection, MovementVector.Y);
+        //AddAccelerationInput(RightDirection, MovementVector.X);
 
         AddMovementInput(ForwardDirection, 1);
         //AddMovementInput(RightDirection, MovementVector.X);
@@ -157,7 +157,21 @@ void ASB_CharacterController::Move(const FInputActionValue& Value)
             //ProcessRotation(FRotator(0.0f, AngleDegrees, 0.0f));
         }
 
+    }*/
+    if (Controller != nullptr && !MovementVector.IsNearlyZero())
+    {
+        float TargetYawOffset = MovementVector.X * MaxTurnAngle;
+        float TargetYaw = GetVelocity().Rotation().Yaw + TargetYawOffset;
+
+        float CurrentYaw = GetActorRotation().Yaw;
+        float ClampedYaw = FMath::Clamp(TargetYaw, CurrentYaw - MaxTurnAngle, CurrentYaw + MaxTurnAngle);
+
+        FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), FRotator(0.f, ClampedYaw, 0.f), GetWorld()->GetDeltaSeconds(), SurfRotationSpeed);
+        SetActorRotation(NewRotation);
+
+        AddMovementInput(GetActorForwardVector(), 1.0f);
     }
+
 }
 
 USB_CharacterMovementComponent* ASB_CharacterController::GetUSBCharacterMovementComponent() {
