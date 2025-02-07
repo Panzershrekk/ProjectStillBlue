@@ -8,6 +8,7 @@
 #include "Logging/LogMacros.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "SB_CharacterMovementComponent.h"
 #include "SB_CharacterController.generated.h"
 
 class UInputMappingContext;
@@ -57,6 +58,10 @@ protected:
 	void Look(const FInputActionValue& Value);
 
 	void Move(const FInputActionValue& Value);
+
+	USB_CharacterMovementComponent* GetUSBCharacterMovementComponent();
+
+	void ProcessRotation(FRotator Rotation);
 
 	void RightWaveTrigger(const FInputActionValue& Value);
 

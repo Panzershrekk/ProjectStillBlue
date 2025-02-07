@@ -14,6 +14,8 @@ class PROJECTSTILLBLUE_API USB_CharacterMovementComponent : public UCharacterMov
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	float Test;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	
+public :
+	void AddRotation(FRotator Rotation);
 };

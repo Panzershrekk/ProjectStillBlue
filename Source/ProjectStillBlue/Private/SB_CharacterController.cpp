@@ -131,12 +131,42 @@ void ASB_CharacterController::Move(const FInputActionValue& Value)
         const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
         const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-        const FVector MoveVector = ForwardDirection * RightDirection;
         /*AddAccelerationInput(ForwardDirection, MovementVector.Y);
         AddAccelerationInput(RightDirection, MovementVector.X);*/
-        AddMovementInput(MoveVector, MovementVector.Y);
+
+        AddMovementInput(ForwardDirection, 1);
         //AddMovementInput(RightDirection, MovementVector.X);
+
+        // (0,1,0) (Y,X,0)
+        if (!MovementVector.IsNearlyZero()) {
+            // Vecteur en 3D
+            FVector InputDirection = FVector(MovementVector.X, MovementVector.Y, 0.0f);
+            InputDirection.Normalize();
+
+            // Vecteur vers le haut
+            FVector UpVector = FVector(0.0f, 1.0f, 0.0f);
+
+            // Angle entre les deux
+            float AngleDegrees = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(UpVector, InputDirection)));
+
+            // Angle positif ou negatif
+            if (InputDirection.X < 0) {
+                AngleDegrees = -AngleDegrees;
+            }
+            
+            //ProcessRotation(FRotator(0.0f, AngleDegrees, 0.0f));
+        }
+
     }
+}
+
+USB_CharacterMovementComponent* ASB_CharacterController::GetUSBCharacterMovementComponent() {
+    return FindComponentByClass<USB_CharacterMovementComponent>();
+}
+
+void ASB_CharacterController::ProcessRotation(FRotator Rotation) {
+    USB_CharacterMovementComponent* SurfCharacterMovement = GetUSBCharacterMovementComponent();
+    SurfCharacterMovement->AddRotation(Rotation);
 }
 
 

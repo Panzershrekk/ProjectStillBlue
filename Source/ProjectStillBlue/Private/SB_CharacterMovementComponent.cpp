@@ -3,3 +3,10 @@
 
 #include "SB_CharacterMovementComponent.h"
 
+void USB_CharacterMovementComponent::AddRotation(FRotator Rotation)
+{
+	if (PawnOwner)
+	{
+		
+	}
+}
