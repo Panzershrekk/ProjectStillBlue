@@ -16,27 +16,16 @@ ASB_CharacterController::ASB_CharacterController()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+
+	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
-
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
-
-	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
-	// instead of recompiling to adjust them
-	GetCharacterMovement()->JumpZVelocity = 700.f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
-	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
-
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -47,7 +36,6 @@ ASB_CharacterController::ASB_CharacterController()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
-
 }
 
 // Called when the game starts or when spawned
@@ -61,28 +49,40 @@ void ASB_CharacterController::BeginPlay()
 void ASB_CharacterController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	float WaterHeight = 0.0f; // Altitude de la surface de l'eau
 	FVector CurrentPos = GetActorLocation();
-	EMovementMode CurrentMode = GetCharacterMovement()->MovementMode;	
+	EMovementMode CurrentMode = GetCharacterMovement()->MovementMode;
 
 	// Simulation de flotaison (ultra basique)
 	if (CurrentMovementMode == ECustomMovementMode::Surfing)
 	{
-		// Vérifie la hauteur de l’eau et ajuste la position du personnage
-		if (CurrentPos.Z < WaterHeight)
+		// Si on est en chute libre, on ne stabilise pas encore
+		if (CurrentPos.Z < WaterSurfaceZ + 50.0f) // Seuil ajustable
 		{
-			float FloatForce = 10.0f; // Force qui pousse vers le haut
-			FVector UpForce = FVector(0, 0, FloatForce * (WaterHeight - CurrentPos.Z*1.5f) * DeltaTime);
-			GetCharacterMovement()->Velocity += UpForce;
+			// Stabilisation en douceur pour éviter les oscillations brutales
+			float NewZ = FMath::FInterpTo(CurrentPos.Z, WaterSurfaceZ, DeltaTime, 100.f);
+			SetActorLocation(FVector(CurrentPos.X, CurrentPos.Y, NewZ));
+			CurrentVelocity.Z = 0;
 		}
 	}
-	else if (CurrentMode == MOVE_Falling)
+	else if (CurrentMode == MOVE_Falling && CurrentMovementMode == ECustomMovementMode::Walking)
 	{
-		if (CurrentPos.Z < WaterHeight) {
+		if (CurrentPos.Z < WaterSurfaceZ) {
 			// Switch comportement eau
 			SetCustomMovementMode(ECustomMovementMode::Surfing);
+			CurrentVelocity = GetCharacterMovement()->Velocity;
 		}
 	}
+
+	if (!bMoving) {
+		CurrentVelocity = GetCharacterMovement()->Velocity*SurfBrake;
+		GetCharacterMovement()->Velocity = CurrentVelocity;
+	}
+
+	// DEBUG LOGS
+	UE_LOG(LogTemp, Warning, TEXT("CurrentVelocity: %s | Speed: %f"), *CurrentVelocity.ToString(), CurrentVelocity.Size());
+	UE_LOG(LogTemp, Warning, TEXT("SurfAcceleration: %f, SurfMaxSpeed: %f, SurfFriction: %f, SurfTurnSpeed: %f"),
+		SurfAcceleration, SurfMaxSpeed, SurfFriction, SurfTurnSpeed);
+
 }
 
 // Called to bind functionality to input
@@ -90,11 +90,14 @@ void ASB_CharacterController::SetupPlayerInputComponent(UInputComponent* PlayerI
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
-
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::Look);
 		// MOVING                
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ASB_CharacterController::StopMove);
+		// Jumping
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Waves
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::RightWaveTrigger);
@@ -138,82 +141,62 @@ void ASB_CharacterController::Look(const FInputActionValue& Value)
 	}
 }
 
+void ASB_CharacterController::StopMove(const FInputActionValue& Value) {
+	bMoving = false;
+}
+
 void ASB_CharacterController::Move(const FInputActionValue& Value)
 {
-	// input is a Vector2D
+	bMoving = true;
 	FVector2D InputVector = Value.Get<FVector2D>();
-	// Récupère la direction du joystick
 	FVector InputDirection = FVector(InputVector.X, InputVector.Y, 0.0f);
-
-	// Récupère la caméra
+	// Récupérer la direction de la caméra
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	// Récupère la direction de la caméra, projetée sur le plan horizontal
 	FRotator CameraRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-	FVector ForwardVector = FRotationMatrix(CameraRotation).GetScaledAxis(EAxis::X); // Avant de la caméra
-	FVector RightVector = FRotationMatrix(CameraRotation).GetScaledAxis(EAxis::Y);   // Droite de la caméra
+	FVector ForwardVector = FRotationMatrix(CameraRotation).GetScaledAxis(EAxis::X);
+	FVector RightVector = FRotationMatrix(CameraRotation).GetScaledAxis(EAxis::Y);
 
-	// Calcul de la direction du mouvement basé sur l'input du joystick
+	// Calculer la direction de mouvement
 	FVector MoveDirection = ForwardVector * InputVector.Y + RightVector * InputVector.X;
-
-	// Normaliser la direction du mouvement pour éviter que le personnage ne se déplace plus vite en diagonale
 	MoveDirection.Normalize();
 
+	// Si on est en mode Surfing
 	if (CurrentMovementMode == ECustomMovementMode::Surfing)
-	{
-		if (!MoveDirection.IsNearlyZero())
-		{
-			MoveDirection.Normalize();
+	{		
+		// Appliquer la rotation progressivement
+		FRotator TargetRotation = MoveDirection.Rotation();
+		FRotator CurrentRotation = GetActorRotation();
+		FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), SurfTurnSpeed);
 
-			// Rotation progressive
-			FRotator TargetRotation = MoveDirection.Rotation();
-			FRotator CurrentRotation = GetActorRotation();
-			FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), SurfTurnSpeed); // Ajuste la valeur ici pour lisser le virage
+		AddActorWorldRotation(FRotator(0.0f, NewRotation.Yaw - CurrentRotation.Yaw, 0.0f));
 
-			AddActorWorldRotation(FRotator(0.0f, NewRotation.Yaw - CurrentRotation.Yaw, 0.0f));
+		// Ajouter la vitesse progressive pour glisser
+		CurrentVelocity += MoveDirection * SurfAcceleration * GetWorld()->GetDeltaSeconds();
+		CurrentVelocity = CurrentVelocity.GetClampedToMaxSize(SurfMaxSpeed);
 
-			// Ajoute progressivement de la vitesse
-			CurrentVelocity += MoveDirection * SurfAcceleration * GetWorld()->GetDeltaSeconds();
-			CurrentVelocity = CurrentVelocity.GetClampedToMaxSize(SurfMaxSpeed);
-		}
-		else
-		{
-			// Réduction progressive de la vitesse pour simuler l’inertie
-			float Speed = CurrentVelocity.Size();
-			Speed = FMath::Max(Speed - SurfFriction * GetWorld()->GetDeltaSeconds(), 0.0f);
-			CurrentVelocity = CurrentVelocity.GetSafeNormal() * Speed;
-		}
-
-		// Applique le mouvement
+		// Appliquer le mouvement
 		if (!CurrentVelocity.IsNearlyZero())
 		{
 			AddMovementInput(CurrentVelocity.GetSafeNormal(), CurrentVelocity.Size() / SurfMaxSpeed);
 		}
+		
 	}
-	else
+	else if (CurrentMovementMode == ECustomMovementMode::Walking)
 	{
-		// Mode marche normal
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
+		ForwardVector.Normalize();
+		RightVector.Normalize();
 		// add movement 
-		AddMovementInput(ForwardDirection, InputVector.Y);
-		AddMovementInput(RightDirection, InputVector.X);
+		AddMovementInput(ForwardVector, InputVector.Y);
+		AddMovementInput(RightVector, InputVector.X);
 
-		// Rotation
+		// Appliquer la rotation progressivement
 		FRotator TargetRotation = MoveDirection.Rotation();
 		FRotator CurrentRotation = GetActorRotation();
-		FRotator NewRotation = TargetRotation;//FMath::RInterpTo(CurrentRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), SurfTurnSpeed); // Ajuste la valeur ici pour lisser le virage
+		FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), 100.f);
 
 		AddActorWorldRotation(FRotator(0.0f, NewRotation.Yaw - CurrentRotation.Yaw, 0.0f));
-
 	}
+	
 }
 
 void ASB_CharacterController::SetCustomMovementMode(ECustomMovementMode NewMode)
@@ -232,9 +215,9 @@ void ASB_CharacterController::SetCustomMovementMode(ECustomMovementMode NewMode)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Je surf"));
 		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
-		GetCharacterMovement()->BrakingDecelerationFlying = 0.0f; // Pas de freinage automatique
+		GetCharacterMovement()->BrakingDecelerationFalling = 0.0f; // Pas de freinage automatique
 		GetCharacterMovement()->GroundFriction = 0.0f; // Glisse
-		GetCharacterMovement()->GravityScale = 0.5f; // Gravité réduite pour flotter légèrement
+		GetCharacterMovement()->GravityScale = 1.0f;
 	}
 }
 

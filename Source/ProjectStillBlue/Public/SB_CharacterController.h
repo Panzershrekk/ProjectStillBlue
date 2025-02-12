@@ -40,6 +40,8 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* JumpAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* RightWaveTriggerAction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LeftWaveTriggerAction;
@@ -55,6 +57,8 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
 	float SurfTurnSpeed = 1.5f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
+	float SurfBrake = 0.99f;
 
 	FVector CurrentVelocity = FVector::ZeroVector;
 
@@ -72,6 +76,8 @@ protected:
 	void Look(const FInputActionValue& Value);
 
 	void Move(const FInputActionValue& Value);
+
+	void StopMove(const FInputActionValue& Value);
 
 	USB_CharacterMovementComponent* GetUSBCharacterMovementComponent();
 
@@ -92,4 +98,6 @@ public:
 
 private:
 	ECustomMovementMode CurrentMovementMode = ECustomMovementMode::Surfing;
+	float WaterSurfaceZ = 100.0f; // Hauteur de l'eau
+	bool bMoving = false;
 };
