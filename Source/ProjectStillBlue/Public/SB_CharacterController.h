@@ -8,6 +8,8 @@
 #include "Logging/LogMacros.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+//#include "NiagaraComponent.h"
+//#include "NiagaraFunctionLibrary.h"
 #include "SB_CharacterMovementComponent.h"
 #include "SB_CharacterController.generated.h"
 
@@ -59,6 +61,8 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 	float SurfTurnSpeed = 1.5f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
 	float SurfBrake = 0.99f;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FX", meta = (AllowPrivateAccess = "true"))
+	//UNiagaraComponent* TrailEffect;
 
 	FVector CurrentVelocity = FVector::ZeroVector;
 

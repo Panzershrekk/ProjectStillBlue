@@ -36,6 +36,10 @@ ASB_CharacterController::ASB_CharacterController()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+
+	//TrailEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailEffect"));
+	//TrailEffect->SetupAttachment(RootComponent);
+	//TrailEffect->bAutoActivate = false; // Désactivé au départ
 }
 
 // Called when the game starts or when spawned
@@ -79,9 +83,9 @@ void ASB_CharacterController::Tick(float DeltaTime)
 	}
 
 	// DEBUG LOGS
-	UE_LOG(LogTemp, Warning, TEXT("CurrentVelocity: %s | Speed: %f"), *CurrentVelocity.ToString(), CurrentVelocity.Size());
-	UE_LOG(LogTemp, Warning, TEXT("SurfAcceleration: %f, SurfMaxSpeed: %f, SurfFriction: %f, SurfTurnSpeed: %f"),
-		SurfAcceleration, SurfMaxSpeed, SurfFriction, SurfTurnSpeed);
+	//UE_LOG(LogTemp, Warning, TEXT("CurrentVelocity: %s | Speed: %f"), *CurrentVelocity.ToString(), CurrentVelocity.Size());
+	//UE_LOG(LogTemp, Warning, TEXT("SurfAcceleration: %f, SurfMaxSpeed: %f, SurfFriction: %f, SurfTurnSpeed: %f"),
+	//	SurfAcceleration, SurfMaxSpeed, SurfFriction, SurfTurnSpeed);
 
 }
 
@@ -210,6 +214,7 @@ void ASB_CharacterController::SetCustomMovementMode(ECustomMovementMode NewMode)
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f; // Ajuste la décélération
 		GetCharacterMovement()->GroundFriction = 8.0f; // Ajuste la friction
 		GetCharacterMovement()->GravityScale = 1.0f; // Gravité normale sur terre
+		//TrailEffect->Deactivate();
 	}
 	else
 	{
@@ -218,6 +223,7 @@ void ASB_CharacterController::SetCustomMovementMode(ECustomMovementMode NewMode)
 		GetCharacterMovement()->BrakingDecelerationFalling = 0.0f; // Pas de freinage automatique
 		GetCharacterMovement()->GroundFriction = 0.0f; // Glisse
 		GetCharacterMovement()->GravityScale = 1.0f;
+		//TrailEffect->Activate();
 	}
 }
 
