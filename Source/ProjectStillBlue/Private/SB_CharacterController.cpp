@@ -22,6 +22,7 @@ ASB_CharacterController::ASB_CharacterController()
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
 
+
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -37,9 +38,9 @@ ASB_CharacterController::ASB_CharacterController()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	//TrailEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailEffect"));
-	//TrailEffect->SetupAttachment(RootComponent);
-	//TrailEffect->bAutoActivate = false; // Désactivé au départ
+	TrailEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailEffect"));
+	TrailEffect->SetupAttachment(RootComponent);
+	TrailEffect->bAutoActivate = true;
 }
 
 // Called when the game starts or when spawned
@@ -62,10 +63,13 @@ void ASB_CharacterController::Tick(float DeltaTime)
 		// Si on est en chute libre, on ne stabilise pas encore
 		if (CurrentPos.Z < WaterSurfaceZ + 50.0f) // Seuil ajustable
 		{
+			GetCharacterMovement()->GravityScale = 0.0f;
 			// Stabilisation en douceur pour éviter les oscillations brutales
-			float NewZ = FMath::FInterpTo(CurrentPos.Z, WaterSurfaceZ, DeltaTime, 100.f);
+			float NewZ = FMath::FInterpTo(CurrentPos.Z, WaterSurfaceZ, DeltaTime, 2.f);
 			SetActorLocation(FVector(CurrentPos.X, CurrentPos.Y, NewZ));
-			CurrentVelocity.Z = 0;
+		}
+		else {
+			GetCharacterMovement()->GravityScale = 1.0f;
 		}
 	}
 	else if (CurrentMode == MOVE_Falling && CurrentMovementMode == ECustomMovementMode::Walking)
@@ -77,15 +81,17 @@ void ASB_CharacterController::Tick(float DeltaTime)
 		}
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("bMoving: %i"), bMoving);
 	if (!bMoving) {
+		
 		CurrentVelocity = GetCharacterMovement()->Velocity*SurfBrake;
 		GetCharacterMovement()->Velocity = CurrentVelocity;
 	}
-
+	
 	// DEBUG LOGS
-	//UE_LOG(LogTemp, Warning, TEXT("CurrentVelocity: %s | Speed: %f"), *CurrentVelocity.ToString(), CurrentVelocity.Size());
-	//UE_LOG(LogTemp, Warning, TEXT("SurfAcceleration: %f, SurfMaxSpeed: %f, SurfFriction: %f, SurfTurnSpeed: %f"),
-	//	SurfAcceleration, SurfMaxSpeed, SurfFriction, SurfTurnSpeed);
+	UE_LOG(LogTemp, Warning, TEXT("CurrentVelocity: %s | Speed: %f | MaxSpeed : %f"), *CurrentVelocity.ToString(), CurrentVelocity.Size(), GetCharacterMovement()->GetMaxSpeed());
+	UE_LOG(LogTemp, Warning, TEXT("SurfAcceleration: %f, SurfMaxSpeed: %f, SurfFriction: %f, SurfTurnSpeed: %f"),
+		SurfAcceleration, SurfMaxSpeed, SurfFriction, SurfTurnSpeed);
 
 }
 
@@ -99,6 +105,7 @@ void ASB_CharacterController::SetupPlayerInputComponent(UInputComponent* PlayerI
 		// MOVING                
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::Move);
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ASB_CharacterController::StopMove);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Canceled, this, &ASB_CharacterController::StopMove);
 		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
@@ -146,6 +153,7 @@ void ASB_CharacterController::Look(const FInputActionValue& Value)
 }
 
 void ASB_CharacterController::StopMove(const FInputActionValue& Value) {
+	UE_LOG(LogTemp, Warning, TEXT("stopmove"));
 	bMoving = false;
 }
 
@@ -211,19 +219,21 @@ void ASB_CharacterController::SetCustomMovementMode(ECustomMovementMode NewMode)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Je marche"));
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		GetCharacterMovement()->MaxWalkSpeed = 500.f;
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f; // Ajuste la décélération
 		GetCharacterMovement()->GroundFriction = 8.0f; // Ajuste la friction
 		GetCharacterMovement()->GravityScale = 1.0f; // Gravité normale sur terre
-		//TrailEffect->Deactivate();
+		TrailEffect->Deactivate();
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Je surf"));
 		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+		GetCharacterMovement()->MaxWalkSpeed = SurfMaxSpeed;
 		GetCharacterMovement()->BrakingDecelerationFalling = 0.0f; // Pas de freinage automatique
 		GetCharacterMovement()->GroundFriction = 0.0f; // Glisse
 		GetCharacterMovement()->GravityScale = 1.0f;
-		//TrailEffect->Activate();
+		TrailEffect->Activate();
 	}
 }
 
