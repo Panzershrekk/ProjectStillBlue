@@ -19,6 +19,10 @@ void USaveManager::AsyncSave(FSaveInfo SaveInfo)
 		//SavedDelegate.BindUObject(SomeUObjectPointer, &USomeUObjectClass::SaveGameDelegateFunction);
 		//TODO : Change that in case we need to call the delegate somewhere else
 		SavedDelegate.BindUObject(this, &USaveManager::SaveCompleteDelegate);
+
+		// Set data on the savegame object.
+		SaveGameInstance->SaveInfo.PlayerName = SaveInfo.PlayerName;
+
 		// Start async save process.
 		UGameplayStatics::AsyncSaveGameToSlot(SaveGameInstance, SaveInfo.SlotNameString, SaveInfo.UserIndexInt32, SavedDelegate);
 	}

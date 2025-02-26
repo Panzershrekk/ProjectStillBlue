@@ -17,7 +17,7 @@ class PROJECTSTILLBLUE_API USBSaveGame : public USaveGame
 
 public:
 
-	UPROPERTY(VisibleAnywhere, Category = Save)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save")
 	FSaveInfo SaveInfo;
 	USBSaveGame();
 };
