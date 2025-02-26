@@ -16,14 +16,9 @@ class PROJECTSTILLBLUE_API USBSaveGame : public USaveGame
 
 public:
 
-	UPROPERTY(VisibleAnywhere, Category = Save)
-	FString PlayerName;
+	/*UPROPERTY(VisibleAnywhere, Category = Save)
+	FSaveInfo SaveInfo;*/
 
-	UPROPERTY(VisibleAnywhere, Category = Save)
-	FString SaveSlotName;
-
-	UPROPERTY(VisibleAnywhere, Category = Save)
-	uint32 UserIndex;
 
 	USBSaveGame();
 	void AsyncSave(FSaveInfo SaveInfo);
@@ -37,7 +32,8 @@ USTRUCT(BlueprintType)
 struct FSaveInfo
 {
 	GENERATED_BODY()
-
+	UPROPERTY(VisibleAnywhere, Category = Save)
+	FString PlayerName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
 	FString SlotNameString;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")

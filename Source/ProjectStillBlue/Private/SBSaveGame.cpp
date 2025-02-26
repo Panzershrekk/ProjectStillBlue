@@ -6,8 +6,8 @@
 
 USBSaveGame::USBSaveGame()
 {
-	SaveSlotName = TEXT("TestSaveSlot");
-	UserIndex = 0;
+	/*SaveInfo.SlotNameString = TEXT("TestSaveSlot");
+	SaveInfo.UserIndexInt32 = 0;*/
 }
 
 void USBSaveGame::AsyncSave(FSaveInfo SaveInfo)
@@ -22,7 +22,7 @@ void USBSaveGame::AsyncSave(FSaveInfo SaveInfo)
 		SavedDelegate.BindUObject(this, &USBSaveGame::SaveCompleteDelegate);
 
 		// Set data on the savegame object.
-		SaveGameInstance->PlayerName = TEXT("PlayerOne");
+		//SaveGameInstance->SaveInfo.PlayerName = TEXT("PlayerOne");
 
 		// Start async save process.
 		UGameplayStatics::AsyncSaveGameToSlot(SaveGameInstance, SaveInfo.SlotNameString, SaveInfo.UserIndexInt32, SavedDelegate);
