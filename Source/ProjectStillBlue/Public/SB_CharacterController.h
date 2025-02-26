@@ -59,9 +59,14 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
 	float SurfTurnSpeed = 1.5f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
 	float SurfBrake = 1.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FX", meta = (AllowPrivateAccess = "true"))
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
+	float SurfWaterPushCoeffZ = 0.7f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FX", meta = (AllowPrivateAccess = "true"))	
 	UNiagaraComponent* TrailEffect;
 
 	FVector CurrentVelocity = FVector::ZeroVector;
@@ -82,6 +87,10 @@ protected:
 	void Move(const FInputActionValue& Value);
 
 	void StopMove(const FInputActionValue& Value);
+
+	void SurfJump(const FInputActionValue& Value);
+
+	void StopSurfJumping();
 
 	USB_CharacterMovementComponent* GetUSBCharacterMovementComponent();
 
@@ -104,4 +113,5 @@ private:
 	ECustomMovementMode CurrentMovementMode = ECustomMovementMode::Surfing;
 	float WaterSurfaceZ = 100.0f; // Hauteur de l'eau
 	bool bMoving = false;
+	bool bSurfJumping = false;
 };

@@ -61,12 +61,14 @@ void ASB_CharacterController::Tick(float DeltaTime)
 	if (CurrentMovementMode == ECustomMovementMode::Surfing)
 	{
 		// Si on est en chute libre, on ne stabilise pas encore
-		if (CurrentPos.Z < WaterSurfaceZ + 50.0f) // Seuil ajustable
+		if (CurrentPos.Z < WaterSurfaceZ) // Seuil ajustable
 		{
+			if (bSurfJumping) {
+				bSurfJumping = false;
+			}
 			GetCharacterMovement()->GravityScale = 0.0f;
-			// Stabilisation en douceur pour éviter les oscillations brutales
-			float NewZ = FMath::FInterpTo(CurrentPos.Z, WaterSurfaceZ, DeltaTime, 2.f);
-			SetActorLocation(FVector(CurrentPos.X, CurrentPos.Y, NewZ));
+			CurrentVelocity.Z += (WaterSurfaceZ - CurrentPos.Z) * SurfWaterPushCoeffZ;
+			GetCharacterMovement()->Velocity = CurrentVelocity;
 		}
 		else {
 			GetCharacterMovement()->GravityScale = 1.0f;
@@ -86,7 +88,7 @@ void ASB_CharacterController::Tick(float DeltaTime)
 		
 		CurrentVelocity = GetCharacterMovement()->Velocity*SurfBrake;
 		GetCharacterMovement()->Velocity = CurrentVelocity;
-	}
+	}	
 	
 	// DEBUG LOGS
 	UE_LOG(LogTemp, Warning, TEXT("CurrentVelocity: %s | Speed: %f | MaxSpeed : %f"), *CurrentVelocity.ToString(), CurrentVelocity.Size(), GetCharacterMovement()->GetMaxSpeed());
@@ -108,7 +110,9 @@ void ASB_CharacterController::SetupPlayerInputComponent(UInputComponent* PlayerI
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Canceled, this, &ASB_CharacterController::StopMove);
 		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ASB_CharacterController::SurfJump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ASB_CharacterController::StopSurfJumping);
 
 		// Waves
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::RightWaveTrigger);
@@ -157,19 +161,31 @@ void ASB_CharacterController::StopMove(const FInputActionValue& Value) {
 	bMoving = false;
 }
 
+void ASB_CharacterController::SurfJump(const FInputActionValue& Value) {
+	if (CurrentMovementMode == ECustomMovementMode::Surfing && !bSurfJumping) {
+		bSurfJumping = true;
+		LaunchCharacter(FVector(0, 0, 100000 * GetWorld()->GetDeltaSeconds()), false, false);
+	}
+}
+
+void ASB_CharacterController::StopSurfJumping() {
+
+}
+
 void ASB_CharacterController::Move(const FInputActionValue& Value)
 {
 	bMoving = true;
 	FVector2D InputVector = Value.Get<FVector2D>();
-	FVector InputDirection = FVector(InputVector.X, InputVector.Y, 0.0f);
 	// Récupérer la direction de la caméra
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	FRotator CameraRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
 	FVector ForwardVector = FRotationMatrix(CameraRotation).GetScaledAxis(EAxis::X);
 	FVector RightVector = FRotationMatrix(CameraRotation).GetScaledAxis(EAxis::Y);
-
+	ForwardVector.Normalize();
+	RightVector.Normalize();
 	// Calculer la direction de mouvement
 	FVector MoveDirection = ForwardVector * InputVector.Y + RightVector * InputVector.X;
+	MoveDirection.Z = 0;
 	MoveDirection.Normalize();
 
 	// Si on est en mode Surfing
@@ -190,16 +206,12 @@ void ASB_CharacterController::Move(const FInputActionValue& Value)
 		if (!CurrentVelocity.IsNearlyZero())
 		{
 			AddMovementInput(CurrentVelocity.GetSafeNormal(), CurrentVelocity.Size() / SurfMaxSpeed);
-		}
-		
+		}		
 	}
 	else if (CurrentMovementMode == ECustomMovementMode::Walking)
 	{
-		ForwardVector.Normalize();
-		RightVector.Normalize();
 		// add movement 
-		AddMovementInput(ForwardVector, InputVector.Y);
-		AddMovementInput(RightVector, InputVector.X);
+		AddMovementInput(MoveDirection.GetSafeNormal());		
 
 		// Appliquer la rotation progressivement
 		FRotator TargetRotation = MoveDirection.Rotation();
@@ -207,8 +219,7 @@ void ASB_CharacterController::Move(const FInputActionValue& Value)
 		FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), 100.f);
 
 		AddActorWorldRotation(FRotator(0.0f, NewRotation.Yaw - CurrentRotation.Yaw, 0.0f));
-	}
-	
+	}	
 }
 
 void ASB_CharacterController::SetCustomMovementMode(ECustomMovementMode NewMode)
