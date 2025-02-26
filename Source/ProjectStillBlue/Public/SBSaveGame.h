@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
+#include "SB_Utils.h"
 #include "SBSaveGame.generated.h"
 
 /**
@@ -16,26 +17,7 @@ class PROJECTSTILLBLUE_API USBSaveGame : public USaveGame
 
 public:
 
-	/*UPROPERTY(VisibleAnywhere, Category = Save)
-	FSaveInfo SaveInfo;*/
-
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save")
+	FSaveInfo SaveInfo;
 	USBSaveGame();
-	void AsyncSave(FSaveInfo SaveInfo);
-	void AsyncLoad(FString SlotName);
-
-	void SaveCompleteDelegate(const FString& SlotName, const int32 UserIndex, bool bSuccess);
-	void LoadCompleteDelegate(const FString& SlotName, const int32 UserIndex, USaveGame* LoadedGameData);
-};
-
-USTRUCT(BlueprintType)
-struct FSaveInfo
-{
-	GENERATED_BODY()
-	UPROPERTY(VisibleAnywhere, Category = Save)
-	FString PlayerName;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
-	FString SlotNameString;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
-	int32 UserIndexInt32;
 };
