@@ -65,9 +65,18 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
 	float SurfWaterPushCoeffZ = 0.7f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SurfMovement", meta = (AllowPrivateAccess = "true"))
+	float SurfJumpPower = 10000.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FX", meta = (AllowPrivateAccess = "true"))	
 	UNiagaraComponent* TrailEffect;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FX", meta = (AllowPrivateAccess = "true"))
+	UNiagaraComponent* SplashEffect;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FX", meta = (AllowPrivateAccess = "true"))
+	float SplashVelocityChangeReq = 15.f;
+
 
 	FVector CurrentVelocity = FVector::ZeroVector;
 
@@ -92,6 +101,8 @@ protected:
 
 	void StopSurfJumping();
 
+	void SpawnSplashEffect();
+
 	USB_CharacterMovementComponent* GetUSBCharacterMovementComponent();
 
 	void RightWaveTrigger(const FInputActionValue& Value);
@@ -114,4 +125,7 @@ private:
 	float WaterSurfaceZ = 100.0f; // Hauteur de l'eau
 	bool bMoving = false;
 	bool bSurfJumping = false;
+
+	FVector PreviousVelocity;
+	float TurnThreshold = 1.f; // Seuil pour déclencher les éclaboussures
 };

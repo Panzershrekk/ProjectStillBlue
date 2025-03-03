@@ -38,9 +38,14 @@ ASB_CharacterController::ASB_CharacterController()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	// VFX
 	TrailEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailEffect"));
 	TrailEffect->SetupAttachment(RootComponent);
 	TrailEffect->bAutoActivate = true;
+
+	SplashEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("SplashEffect"));
+	SplashEffect->SetupAttachment(RootComponent);
+	SplashEffect->bAutoActivate = false;
 }
 
 // Called when the game starts or when spawned
@@ -72,7 +77,14 @@ void ASB_CharacterController::Tick(float DeltaTime)
 		}
 		else {
 			GetCharacterMovement()->GravityScale = 1.0f;
+			if (CurrentPos.Z < WaterSurfaceZ + 10.f) {
+				if (fabsf(CurrentVelocity.Size() - PreviousVelocity.Size()) > SplashVelocityChangeReq) {
+					SpawnSplashEffect();
+				}
+			}
 		}
+
+		PreviousVelocity = CurrentVelocity;
 	}
 	else if (CurrentMode == MOVE_Falling && CurrentMovementMode == ECustomMovementMode::Walking)
 	{
@@ -95,6 +107,14 @@ void ASB_CharacterController::Tick(float DeltaTime)
 	UE_LOG(LogTemp, Warning, TEXT("SurfAcceleration: %f, SurfMaxSpeed: %f, SurfFriction: %f, SurfTurnSpeed: %f"),
 		SurfAcceleration, SurfMaxSpeed, SurfFriction, SurfTurnSpeed);
 
+}
+
+void ASB_CharacterController::SpawnSplashEffect()
+{
+	if (SplashEffect)
+	{
+		SplashEffect->Activate(true);
+	}
 }
 
 // Called to bind functionality to input
@@ -164,7 +184,7 @@ void ASB_CharacterController::StopMove(const FInputActionValue& Value) {
 void ASB_CharacterController::SurfJump(const FInputActionValue& Value) {
 	if (CurrentMovementMode == ECustomMovementMode::Surfing && !bSurfJumping) {
 		bSurfJumping = true;
-		LaunchCharacter(FVector(0, 0, 100000 * GetWorld()->GetDeltaSeconds()), false, false);
+		LaunchCharacter(FVector(0, 0, SurfJumpPower * GetWorld()->GetDeltaSeconds()), false, false);
 	}
 }
 
