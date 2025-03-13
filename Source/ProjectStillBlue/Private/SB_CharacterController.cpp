@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "SB_Wave.h"
 
 // Sets default values
 ASB_CharacterController::ASB_CharacterController()
@@ -46,6 +47,7 @@ ASB_CharacterController::ASB_CharacterController()
 	SplashEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("SplashEffect"));
 	SplashEffect->SetupAttachment(RootComponent);
 	SplashEffect->bAutoActivate = false;
+
 }
 
 // Called when the game starts or when spawned
@@ -53,6 +55,20 @@ void ASB_CharacterController::BeginPlay()
 {
 	Super::BeginPlay();
 
+}
+
+void ASB_CharacterController::BoostSpeed() 
+{
+	UE_LOG(LogTemp, Warning, TEXT("BoostSpeed !"));
+	GetCharacterMovement()->MaxWalkSpeed *= 1.5f;
+	SurfMaxSpeed *= 1.5f;
+	GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &ASB_CharacterController::ResetSpeed, 2.0f, false);
+}
+
+void ASB_CharacterController::ResetSpeed()
+{
+	GetCharacterMovement()->MaxWalkSpeed = 1200.f;
+	SurfMaxSpeed = 1200.f;
 }
 
 // Called every frame
@@ -135,8 +151,8 @@ void ASB_CharacterController::SetupPlayerInputComponent(UInputComponent* PlayerI
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ASB_CharacterController::StopSurfJumping);
 
 		// Waves
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::RightWaveTrigger);
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::LeftWaveTrigger);
+		EnhancedInputComponent->BindAction(RightWaveTriggerAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::RightWaveTrigger);
+		EnhancedInputComponent->BindAction(LeftWaveTriggerAction, ETriggerEvent::Triggered, this, &ASB_CharacterController::LeftWaveTrigger);
 	}
 }
 
@@ -155,12 +171,17 @@ void ASB_CharacterController::NotifyControllerChanged()
 }
 
 void ASB_CharacterController::RightWaveTrigger(const FInputActionValue& Value) {
-
+	this->SpawnWave(false);
 }
 
 
 void ASB_CharacterController::LeftWaveTrigger(const FInputActionValue& Value) {
+	this->SpawnWave(true);
+}
 
+void ASB_CharacterController::ResetWaveCooldown() {
+	UE_LOG(LogTemp, Warning, TEXT("ResetWaveCooldown() appelé !"));
+	bCanSpawnWave = true;
 }
 
 void ASB_CharacterController::Look(const FInputActionValue& Value)
@@ -255,6 +276,7 @@ void ASB_CharacterController::SetCustomMovementMode(ECustomMovementMode NewMode)
 		GetCharacterMovement()->GroundFriction = 8.0f; // Ajuste la friction
 		GetCharacterMovement()->GravityScale = 1.0f; // Gravité normale sur terre
 		TrailEffect->Deactivate();
+		GetWorldTimerManager().ClearTimer(WaveTimerHandle);
 	}
 	else
 	{
@@ -268,11 +290,53 @@ void ASB_CharacterController::SetCustomMovementMode(ECustomMovementMode NewMode)
 	}
 }
 
+void ASB_CharacterController::SpawnWave(bool bIsLeft)
+{
+	if (WaveClass && CurrentMovementMode == ECustomMovementMode::Surfing)
+	{
+		// Vérifie si le joueur peut spawn une vague
+		if (!bCanSpawnWave)
+		{
+			return;
+		}
+
+		// Vérifie si le joueur respecte l’alternance
+		if ((bIsLeft && bLastWaveWasLeft) || (!bIsLeft && !bLastWaveWasLeft))
+		{
+			return; // Empêche de spawn deux fois du même côté
+		}
+
+		// Bloque la création de nouvelles vagues jusqu'à la fin du cooldown
+		bCanSpawnWave = false;
+		bLastWaveWasLeft = bIsLeft;
+
+		FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 1500.f;
+		SpawnLocation.Z = WaterSurfaceZ-180.f;
+		SpawnLocation += bIsLeft ? -GetActorRightVector() * 280.f : GetActorRightVector() * 280.f;
+
+		FRotator SpawnRotation = GetActorRotation();
+		if (bIsLeft) {
+			SpawnRotation.Yaw += 90.0f;
+		}
+		else {
+			SpawnRotation.Yaw -= 80.0f;
+		}
+		GetWorld()->SpawnActor<ASB_Wave>(WaveClass, SpawnLocation, SpawnRotation);
+
+		// Démarre le cooldown
+		GetWorldTimerManager().SetTimer(WaveCooldownTimerHandle, this, &ASB_CharacterController::ResetWaveCooldown, 1.5f, false);
+	}
+}
+
 void ASB_CharacterController::Landed(const FHitResult& Hit)
 {
-	SetCustomMovementMode(ECustomMovementMode::Walking);
-	Super::OnLanded(Hit); // Appelle la version de la méthode dans la classe parente (ACharacter)
-	UE_LOG(LogTemp, Warning, TEXT("Le personnage a atterri"));
+	ASB_Wave* Wave = Cast<ASB_Wave>(Hit.GetActor());
+
+	if (!Wave) {
+		SetCustomMovementMode(ECustomMovementMode::Walking);
+		Super::OnLanded(Hit); // Appelle la version de la méthode dans la classe parente (ACharacter)
+		//UE_LOG(LogTemp, Warning, TEXT("Le personnage a atterri"));
+	}
 }
 
 USB_CharacterMovementComponent* ASB_CharacterController::GetUSBCharacterMovementComponent() {

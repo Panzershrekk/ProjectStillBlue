@@ -77,6 +77,9 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FX", meta = (AllowPrivateAccess = "true"))
 	float SplashVelocityChangeReq = 15.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Waves", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class ASB_Wave> WaveClass;
+
 
 	FVector CurrentVelocity = FVector::ZeroVector;
 
@@ -86,6 +89,10 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 public:
 	// Sets default values for this character's properties
 	ASB_CharacterController();	
+	UFUNCTION(BlueprintCallable, Category = "Character")
+	void BoostSpeed();
+	void ResetSpeed();
+	void SpawnWave(bool bIsLeft);
 
 protected:
 	// Called when the game starts or when spawned
@@ -121,6 +128,7 @@ public:
 	virtual void Landed(const FHitResult& Hit) override; // Appelé quand on atterrit sur une surface	
 
 private:
+	// MOUVEMENT
 	ECustomMovementMode CurrentMovementMode = ECustomMovementMode::Surfing;
 	float WaterSurfaceZ = 100.0f; // Hauteur de l'eau
 	bool bMoving = false;
@@ -128,4 +136,13 @@ private:
 
 	FVector PreviousVelocity;
 	float TurnThreshold = 1.f; // Seuil pour déclencher les éclaboussures
+
+	// SPAWN VAGUES
+	FTimerHandle WaveTimerHandle;
+
+	bool bCanSpawnWave = true;
+	bool bLastWaveWasLeft = false; // false = pas encore de vague ou dernière vague à droite
+	FTimerHandle WaveCooldownTimerHandle;
+
+	void ResetWaveCooldown();
 };
