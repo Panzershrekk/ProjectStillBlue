@@ -9,6 +9,7 @@
 #include "GameFramework/Controller.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Kismet/GameplayStatics.h"
 #include "InputActionValue.h"
 #include "SB_Wave.h"
 
@@ -343,5 +344,43 @@ USB_CharacterMovementComponent* ASB_CharacterController::GetUSBCharacterMovement
 	return FindComponentByClass<USB_CharacterMovementComponent>();
 }
 
+APickable* ASB_CharacterController::GetClosestPickable()
+{
+	FVector PlayerLocation = GetActorLocation();
+	FVector PlayerForward = GetActorForwardVector();
+	TArray<AActor*> OverlappingActors;
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_WorldDynamic)); //May change that
+	TArray<AActor*> IgnoredActors;
+	IgnoredActors.Add(this);
+
+	UKismetSystemLibrary::SphereOverlapActors(this, PlayerLocation, PickableRadius, ObjectTypes, APickable::StaticClass(), IgnoredActors, OverlappingActors);
+	APickable* ClosestPickable = nullptr;
+	float MinDistance = PickableRadius * PickableRadius;
+
+	for (AActor* Actor : OverlappingActors)
+	{
+		APickable* Pickable = Cast<APickable>(Actor);
+		if (!Pickable) continue;
+
+		FVector ToPickable = Pickable->GetActorLocation() - PlayerLocation;
+		ToPickable.Normalize();
+
+		float DotProduct = FVector::DotProduct(PlayerForward, ToPickable);
+		float AngleDegrees = FMath::RadiansToDegrees(FMath::Acos(DotProduct));
+
+		if (AngleDegrees <= PickableConeHalfAngleDegree)
+		{
+			float DistanceSquared = FVector::DistSquared(PlayerLocation, Pickable->GetActorLocation());
+			if (DistanceSquared < MinDistance) 
+			{
+				MinDistance = DistanceSquared;
+				ClosestPickable = Pickable;
+			}
+		}
+	}
+
+	return ClosestPickable;
+}
 
 

@@ -9,6 +9,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "NiagaraComponent.h"
+#include "Pickable.h"
 #include "NiagaraFunctionLibrary.h"
 #include "SB_CharacterMovementComponent.h"
 #include "SB_CharacterController.generated.h"
@@ -80,8 +81,14 @@ class PROJECTSTILLBLUE_API ASB_CharacterController : public ACharacter
 	UPROPERTY(EditDefaultsOnly, Category = "Waves", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class ASB_Wave> WaveClass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
+	bool bIsInvincible;
 
 	FVector CurrentVelocity = FVector::ZeroVector;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Pickable", meta = (AllowPrivateAccess = "true"))
+	float PickableRadius = 200.f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Pickable", meta = (AllowPrivateAccess = "true"))
+	float PickableConeHalfAngleDegree = 45.f;
 
 	virtual void NotifyControllerChanged() override;
 	void AddAccelerationInput(FVector WorldDirection, float ScaleValue);
@@ -93,6 +100,8 @@ public:
 	void BoostSpeed();
 	void ResetSpeed();
 	void SpawnWave(bool bIsLeft);
+	UFUNCTION(BlueprintCallable, Category = "Character")
+	APickable* GetClosestPickable();
 
 protected:
 	// Called when the game starts or when spawned
